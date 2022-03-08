@@ -638,11 +638,11 @@ def main(cfg):
         # Create unwrapped and connected components rasters.
         ugram_raster = isce3.io.gdal.Raster(ugram_name, igram_raster.width,
                                             igram_raster.length, np.float32,
-                                            "GTiff")
+                                            "ENVI")
         conn_comp_raster = isce3.io.gdal.Raster(conn_comp_name,
                                                 igram_raster.width,
                                                 igram_raster.length, np.uint32,
-                                                "GTiff")
+                                                "ENVI")
 
         # Check allocation of power, mask, unwrapped phase estimate
         power_raster = get_raster(cfg, 'power', k)
