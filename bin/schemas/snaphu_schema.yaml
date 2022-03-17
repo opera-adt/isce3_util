@@ -1,0 +1,409 @@
+snaphu:
+    # REQUIRED. Path to unwrapped phase rasters. GDT_Float32,same shape as igram_raster.
+    unwrapped_raster: list(str(), required=False)
+
+    # REQUIRED. Path to connected components rasters. GDT_UInt32, same shape as igram_raster
+    connected_components_raster: list(str(), required=False)
+
+    # REQUIRED. Path to input wrapped interferograms (GDT_CFloat32)
+    igram_raster: list(str())
+
+    # REQUIRED. Path to correlation magnitudes normalized in [0, 1]. GDT_Float32, same shape as igram_raster
+    correlation_raster: list(str())
+
+    # REQUIRED Effective number of looks used in input correlation data
+    nlooks: num(min=1)
+
+    # Statistical cost mode
+    cost_mode: enum('topo', 'defo', 'smooth', 'p-norm', required=False)
+
+    # Configuration parameters for the specified cost mode.
+    cost_mode_parameters: include('cost_mode_options', required=False)
+
+    # File path to binary mask of valid pixels (GDT_Byte). Pixels labelled
+    # with 0 will be masked out in the wrapped interferogram.
+    mask: list(str(), required=False)
+
+    # Coarse unwrapped phase estimates to guide SNAPHU. Must be same shape
+    # as input wrapped interferogram.
+    unwrapped_phase_estimate: list(str(), required=False)
+
+    # Initialization method (MST: Minimum Spanning tree;
+    # MCF: Minimum Cost Flow)
+    initialization_method: enum('mst', 'mcf', required=False)
+
+    # Average intensity of the two SLCs in linear units (not dB). If None, interfeogram magnitude
+    # is used as intensity. Used only in topo cost mode!
+    power: list(str(), required=False)
+
+    # Parameters for SNAPHU tiling mode
+    tiling_parameters: include('tiling_options', required=False)
+
+    # Configuration parameters used by the network initialization and nonlinear
+    # network flow solver algorithms
+    solver_parameters: include('solver_options', required=False)
+
+    # Connected components parameters
+    connected_components_parameters: include('connected_components_options', required=False)
+
+    # Parameters for correlation bias model
+    correlation_bias_parameters: include('correlation_bias_options', required=False)
+
+    # Parameters for phase standard deviation model
+    phase_std_parameters: include('phase_std_options', required=False)
+
+    # Path to directory to store intermediate results. If not specified or
+    # not exists,a temporary directory is created and automatically removed to
+    # from the file system at the end of the processing. Otherwise, the directory
+    # and its content will not be cleaned up
+    scratchdir: str(required=False)
+
+    # If True,prints verbose outputs (default: False)
+    verbose: bool(required=False)
+
+    # If True, dumps intermediate data to 'scratchdir' for debugging
+    debug: bool(required=False)
+
+---
+cost_mode_options:
+    # Topo cost mode parameters
+    topo_parameters: include('topo_cost_options', required=False)
+
+    # Deformation cost parameter options
+    deformation_parameters: include('deformation_cost_options', required=False)
+
+    # Smooth cost parameter options
+    smooth_parameters: include('smooth_cost_options', required=False)
+
+    # PNorm cost parameter options
+    pnorm_parameters: include('pnorm_cost_options', required=False)
+
+
+topo_cost_options:
+    # Note: bperp, near_range, dr, da, range_res, azimuth_res, wavelength,
+    # transmit_mode, and altitude are set as required because needed by
+    # TopoCostParams constructor
+
+    # Perpendicular baseline length (meters). Negative values imply
+    # increasing topographic heights.
+    bperp: num()
+
+    # Slant range from platform to first range bin (meters)
+    near_range: num()
+
+    # Slant range bin spacing after multi-looking (meters)
+    dr: num(min=0)
+
+    # Azimuth bin spacing after multi-looking (meters)
+    da: num(min=0)
+
+    # Single-look slant range resolution (meters)
+    range_res: num(min=0)
+
+    # Single-look azimuth resolution (meters)
+    azimuth_res: num(min=0)
+
+    # Wavelength (meters)
+    wavelength: num(min=0)
+
+    # Radar transmit mode. For 'pingpong' and 'repeat_pass' indicate that both
+    # antennas transmitted and received (same effect on the algorithm).
+    # In 'single_antenna_transmit' mode a single antenna was used to transmit
+    # while both antennas received. In this mode, the baseline is effectively halved.
+    transmit_mode: enum('pingpong', 'repeat_pass', 'single_antenna_transmit')
+
+    # Sensor platform altitude relative to the Earth's surface (meters)
+    altitude: num(min=0)
+
+    # Local Earth's radius (meters) for spherical Earth model (default: 6378000.0)
+    earth_radius: num(min=0, required=False)
+
+    # Ratio of diffuse to specular scattering (default: 0.02)
+    kds: num(required=False)
+
+    # Power specular scattering component. Large values imply larger peak
+    # for specular scattering (default: 8.0)
+    specular_exp: num(required=False)
+
+    # Multiplicative factor applied to diffuse scatter term to evaluate crossover
+    # point between diffuse and specular scatter in terms of range slope (default: 2.0)
+    dzr_crit_factor: num(required=False)
+
+    # Flag to enable discontinuities from shadowing. If False, the min topographic
+    # slope is estimated from mean backscatter intensity clipped to 'dz_ei_min'. (default: False)
+    shadow: bool(required=False)
+
+    # Min slope expected in absence of layover (meters per slant range pixel, default: -4.0)
+    dz_ei_min: num(required=False)
+
+    # Width of window (number of pixels) for summing layover brightness (default: 16)
+    layover_width: int(min=0, required=False)
+
+    # Normalized threshold brightness for assuming layover (default: 1.25)
+    layover_min_ei: num(required=False)
+
+    # Multiplicative factor applied to kds to get ratio of slopes for linearized
+    # scattering model. The term improves agreement of piecewise-linear model with
+    # the cosine model near the transition point (dzrcrit) at the expense of poorer
+    # agreement at very large slopes (default: 1.18)
+    slope_ratio_factor: num(required=False)
+
+    # Variance of range slopes due to uncertainties in slope estimation from
+    # brightness in (meter/pixels)^2 (default: 100.0)
+    sigsq_ei: num(required=False)
+
+    # Step size for lookup table of max layover slope based on measured
+    # normalized correlation (default: 0.005)
+    drho: num(required=False)
+
+    # Layover peak location (meters/pixels, default: -2.0)
+    dz_layover_peak: num(required=False)
+
+    # Factor applied to range layover probability to get azimuth layover
+    # probability density (default: 0.99)
+    azdz_factor: num(required=False)
+
+    # Factor applied to slope expected from brightness without layover. Can
+    # account for underestimation of brightness from averaging with neighboring
+    # dark pixels when despeckling. (default: 4.0)
+    dz_ei_factor: num(required=False)
+
+    # eight applied to slope expected from brightness without layover. Must
+    # be between zero and one. Can reduce influence of intensity on
+    # on-layover slope. This is useful if there are lots of non-topographic
+    # variations in brightness (i.e. changes in surface reflectivity, default: 0.5)
+    dz_ei_weight: num(required=False)
+
+    # Factor applied to slope expected from brightness with layover. Can
+    # account for underestimation of brightness from averaging with
+    # neighboring dark pixels when despeckling. (default: 1.0)
+    dz_layover_factor: num(required=False)
+
+    # Ratio of layover probability density to peak probability density for
+    # non-layover slopes expected. (default: 0.9)
+    layover_const: num(required=False)
+
+    # Factor applied to slope variance for non-layover to get falloff of
+    # probability density after the  upper layover slope limit has been
+    # exceeded. (default: 2.0)
+    layover_falloff_const: num(required=False)
+
+    # Fraction of (ambiguity height)^2 to use for slope variance in the
+    # presence of layover. (default: 0.1)
+    sigsq_layover_factor: num(required=False)
+
+    # Number of rows to use in sliding average window for normalized
+    # intensity values (default: 65)
+    krow_ei: int(min=0, required=False)
+
+    # Same as above but for columns (default: 257)
+    kcol_ei: int(min=0, required=False)
+
+    # Initial value of range slope for dzrcrit numerical solution
+    # (meters/pixel, default: 2048.0)
+    init_dzr: num(required=False)
+
+    # Initial range slope step size in dzrhomaz numerical solution
+    # (meters/pixel, default: 100.0)
+    init_dz_step: num(required=False)
+
+    # Height of ambiguity for auto-scaling the `SolverParams.cost_scale`
+    # parameter to equal 100. This is the amount of height change, in meters,
+    # resulting in a :math:`2 \pi` change in the interferometric phase. The
+    # cost scale is automatically adjusted to be inversely proportional to the
+    # mid-swath ambiguity height. (default: 80.0)
+    cost_scale_ambiguity_height: num(required=False)
+
+    # Step size, in radians, for dzrhomax lookup table. The index is on the
+    # flat-earth incidence angle; this is the sample spacing in the table.
+    # (default: 0.01)
+    dnom_inc_angle: num(required=False)
+
+    # Number sliding window pixel to average the wrapped phase gradient to get mean
+    # non-layover slope in the direction parallel to the examined phase difference (default: 7)
+    kpar_dpsi: int(min=1, required=False)
+
+    # Same as above but in the perpendicular direction
+    kperp_dpsi: int(min=1, required=False)
+
+deformation_cost_options:
+    # Factor applied to range discontinuity probability density to get
+    # corresponding value for azimuth (default: 1.0)
+    azdz_factor: num(required=False)
+
+    # Max phase discontinuity in units of cycle of 2*pi. Set to 0 if not abrupt
+    # phase discontinuity are expected (default: 1.2)
+    defo_max: num(min=0, required=False)
+
+    # Phase variance in cycle^2 reflecting uncertainty in measurement of
+    # actual statistical correlation (default: 0.05)
+    sigsq_corr: num(min=0, required=False)
+
+    # Ratio of phase discontinuity probability density to peak probability
+    # density expected for discontinuity-possible pixel differences. 1: zero
+    # cost for discontinuity, o: infinite cost (default: 0.9)
+    defo_const: num(min=0, max=1, required=False)
+
+    # Factor for slope variance for non-layover to get falloff of probability
+    # density after the upper layover slope limit has been exceeded (default: 2.0)
+    layover_falloff_const: num(required=False)
+
+    # Number sliding window pixel to average the wrapped phase gradient to get mean
+    # non-layover slope in the direction parallel to the examined phase difference (default: 7)
+    kpar_dpsi: int(min=1, required=False)
+
+    # Same as above but in the perpendicular direction (default: 7)
+    kperp_dpsi: int(min=1, required=False)
+
+smooth_cost_options:
+    # Number sliding window pixel to average the wrapped phase gradient to get mean
+    # non-layover slope in the direction parallel to the examined phase difference (default: 7)
+    kpar_dpsi: int(min=1, required=False)
+
+    # Same as above but in the perpendicular direction (default: 7)
+    kperp_dpsi: int(min=1, required=False)
+
+pnorm_cost_options:
+    # Lp norm non-negative exponent.
+    lp_exp: num(min=0, required=False)
+
+    # Flag to activate bidirectional Lp costs. If True, scalar weight of a Lp arc
+    # may be different depending on the direction of net flow arc. If False, scalar
+    # weight is the same regardless arc direction
+    bidirection: bool(required=False)
+
+tiling_options:
+    # Max number of child processes to spawn for parallel tile unwrapping. If < 1
+    # use all available processors (default: 1)
+    nproc: int(required=False)
+
+    # Number of tiles along row direction. If `tile_nrows`=`tile_ncols` = 1,
+    # the interferogram is unwrapped as a single (default: 1)
+    tile_nrows: int(min=1, required=False)
+
+    # Same as above but for columns (default: 1)
+    tile_ncols: int(min=1, required=False)
+
+    # Number of overlapping rows between neighboring tiles (default: 0)
+    row_overlap: int(min=0, required=False)
+
+    # Number of overlapping columns between neighboring tiles (default: 0)
+    col_overlap: int(min=0, required=False)
+
+    # Cost threshold for determining boundaries of reliable regions.
+    # Larger cost threshold implies smaller regions (safer, but more expensive
+    # computationally). (default: 500)
+    tile_cost_thresh: int(required=False)
+
+    # Min size (in pixels) of a reliable region in tile mode(default: 100)
+    min_region_size: int(required=False)
+
+    # Extra weight applied to secondary arcs on tile edges (default: 2.5)
+    tile_edge_weight: num(required=False)
+
+    # Max flow magnitude whose cost will be stored in the secondary cost LUT.
+    # Secondary costs larger than this will be approximated by a quadratic function. (default: 8)
+    secondary_arc_flow_max: int(required=False)
+
+    # If True, re-optimize as a single tile after using tile mode for
+    # initialization. Equivalent to unwrapping with multiple tiles,
+    # then using the unwrapped output as the input to a new, SNAPHU single-tile run
+    # making iterative improvements to the solution. May improve speed compared to
+    # a single single-tile run. (default: False)
+    single_tile_reoptimize: bool(required=False)
+
+solver_options:
+    # Maximum flow increment (default: 4)
+    max_flow_increment: int(min=0, required=False)
+
+    # Maximum flow in initialization. If 0, max flow is computed automatically.
+    # To disable, set to large value not overflowing long integer data (default: 9999)
+    initial_max_flow: int(min=0, max=9999, required=False)
+
+    # Constant to add to max flow expected from statistical cost functions for automatically
+    # determining initial maximum flow (default: 3)
+    arc_max_flow_const: int(required=False)
+
+    # Threshold precision for iterative numerical calculation (default: 0.001)
+    threshold: num(required=False)
+
+    # Max cost for scalar MST cost and to estimate number of buckets
+    # for solver routine (default: 1000.0)
+    max_cost: num(required=False)
+
+    # Cost scaling factor applied to floating-point costs before integer
+    # cost quantization (default: 100.0)
+    cost_scale: num(required=False)
+
+    # Integer spacing representing one unit of flow (one phase cycle)
+    # when storing costs as short integers (default: 200)
+    n_cycle: int(required=False)
+
+    # Fraction of total number of nodes to add in each tree expansion phase of
+    # the solver algorithm. (default: 0.0008)
+    max_new_node_const: num(required=False)
+
+    # Number of cycles to call to the solver with a specific flow increment delta
+    # and still consider that increment done. Ideally zero, but scaling for different
+    # deltas may leave some negative cycles not critically affecting the solution.
+    # If None, automatically determined from interferogram shape (default: None)
+    max_n_flow_cycles: num(required=False)
+
+    # Fraction of the number of pixels to use as the maximum number of cycles
+    # allowed for a specific flow increment if max_n_flow_cycles was None (default: 0.00001)
+    max_cycle_frac: num(required=False)
+
+    # Minimum number of connected nodes for unwrappping. If disconnected sets of pixels are
+    # present, a source is selected for each connected set, if number of nodes in the set
+    # is greater than n_conn_node_min.
+    n_conn_node_min: int(min=0, required=False)
+
+    # Number of major iteration between tree pruning operations. Smaller numbers cause
+    # pruning to occur more frequently (default: 2000000000)
+    n_major_prune: int(required=False)
+
+    # Cost threshold for tree pruning. Lower thresholds prune more aggressively
+    # (default: 2000000000)
+    prune_cost_threshold: int(required=False)
+
+connected_components_options:
+    # Minimum size of a single connected component, as a fraction of the total
+    # number of pixels in the tile (default: 0.01)
+    min_frac_area: num(required=False)
+
+    # Cost threshold for connected components. Higher threshold gives smaller
+    # connected components (default: 300)
+    cost_threshold: int(required=False)
+
+    # Max number of connected components per tile (default: 32)
+    max_ncomps: int(required=False)
+
+correlation_bias_options:
+    # c1 parameter for correlation bias model (Touzi et al. 1999)
+    c1: num(required=False)
+
+    # c2 parameter for correlation bias model (Touzi et al. 1999)
+    c2: num(required=False)
+
+    # Factor applied to expected minimum measured (biased) correlation
+    # coefficient. Values smaller than the threshold min_corr_factor * rho0
+    # are assumed to come from zero statistical correlation because of
+    # estimator bias. rho0 is the expected biased correlation measure if the
+    # true correlation is zero. (default: 1.25)
+    min_corr_factor: num(required=False)
+
+# Note: Interferometric phase standard deviation is modelled as
+# .. math:: \sigma_{\phi} = \rho ^{ c_1 + c_2 * \log nlooks + c_3 * nlooks }
+phase_std_options:
+    # c1 parameter for phase std model
+    c1: num(required=False)
+
+    # c2 parameter for phase std model
+    c2: num(required=False)
+
+    # c3 parameter for phase std model
+    c3: num(required=False)
+
+    # Min phase variance value after quantization to integers.
+    # Must be greater than 0 to prevent division by 0. (default: 1)
+    sigsq_min: int(required=False)

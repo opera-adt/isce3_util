@@ -2,8 +2,7 @@ import argparse
 import os
 import isce3
 import isce3.unwrap.snaphu as snaphu
-from nisar.workflows.runconfig import RunConfig
-import nisar.workflows.helpers as helpers
+import yamale
 import journal
 import numpy as np
 from ruamel.yaml import YAML
@@ -13,6 +12,7 @@ EXAMPLE = """example:
   unwrap_snaphu.py -h / --help          # help
 """
 
+WORKFLOW_SCRIPTS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 def command_line_parser():
     """
@@ -39,9 +39,40 @@ def load_runconfig(cmd_opts):
     cmd_opts: NameSpace
        Command line option parser
     """
-    # Upload the runconfig in a dictionary
+    error_channel = journal.error('unwrap_snaphu.load_runconfig')
+    try:
+        # Load schemas corresponding to SNAPHU and to validate against
+        schema = yamale.make_schema(f'{WORKFLOW_SCRIPTS_DIR}/schemas/snaphu_schema.yaml',
+                                    parser='ruamel')
+    except:
+        err_str = f'Unable to load the schema for SNAPHU unwrapper'
+        error_channel.log(err_str)
+        raise ValueError(err_str)
+
+    runconfig_path = cmd_opts.run_config_path
+    if os.path.isfile(runconfig_path):
+        try:
+            data = yamale.make_data(runconfig_path, parser='ruamel')
+        except yamale.YamaleError as yamale_err:
+            err_str = f'Yamale is unable to load the SNAPHU runconfig at {runconfig_path}'
+            error_channel.log(err_str)
+            raise yamale.YamaleError(err_str) from yamale_err
+    else:
+        err_str= f'Runconfig file at {runconfig_path} has not been found'
+        error_channel.log(err_str)
+        raise FileNotFoundError(err_str)
+
+    # Validate YAML file from command line
+    try:
+        yamale.validate(schema, data)
+    except yamale.YamaleError as yamale_err:
+        err_str = f'Schema validation failed for SNAPHU and runconfig at {runconfig_path}'
+        error_channel.log(err_str)
+        raise yamale.YamaleError(err_str) from yamale_err
+
+    # Load user-provided runconfig
     parser = YAML(typ='safe')
-    with open(cmd_opts.run_config_path, 'r') as f:
+    with open(runconfig_path, 'r') as f:
         runconfig = parser.load(f)
     return runconfig
 
@@ -583,6 +614,9 @@ def unwrap_snaphu(snaphu_cfg, ugram, conn_comp, igram, corr,
     cost_mode = snaphu_cfg.get('cost_mode', 'defo')
     cost_params = select_cost_options(snaphu_cfg, cost_mode)
 
+    # Get initialization method. If not found, assign MCF
+    init_method = snaphu_cfg.get('initialization_method', 'mcf')
+
     # Get tiling parameters
     tile_params = set_tile_params(snaphu_cfg)
     # Get solver parameters
@@ -601,7 +635,7 @@ def unwrap_snaphu(snaphu_cfg, ugram, conn_comp, igram, corr,
 
     # All parameters are set. Ready to unwrap
     snaphu.unwrap(ugram, conn_comp, igram, corr,
-                  nlooks, cost_mode, cost_params, power,
+                  nlooks, cost_mode, cost_params, init_method, power,
                   mask, unw_est, tile_params, solver_params,
                   conn_comp_params, corr_model_params, phase_std_params,
                   scratchdir, verbose, debug)
